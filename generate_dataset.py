@@ -51,8 +51,10 @@ class FrameExtractor :
 
         
     def extract_all_frames(self, test_ids=TEST_IDS, fps_list=FPS_LIST) :
-        test_dirs = [os.path.join(self.root_dir,x) for x in os.listdir(self.root_dir) if x in test_ids]
-        train_dirs = [os.path.join(self.root_dir,x) for x in os.listdir(self.root_dir) if x not in test_ids]
+        test_dirs = [os.path.join(self.root_dir,x) for x in os.listdir(self.root_dir) if x in test_ids and \
+            os.path.isdir(os.path.join(self.root_dir,x))]
+        train_dirs = [os.path.join(self.root_dir,x) for x in os.listdir(self.root_dir) if x not in test_ids and \
+            os.path.isdir(os.path.join(self.root_dir,x))]
         
         
         # generating train and test frames
@@ -62,6 +64,19 @@ class FrameExtractor :
         for fps in fps_list :
             self.process_dirs(test_dirs,os.path.join(self.out_dir,F"test_{fps}fps"), fps)
 
+
+def generate_annotations(root_dir_name, ann_file_name) :
+    all_dirs = [ os.path.join(root_dir_name,x) for x in os.listdir(root_dir_name)]
+    annotations = []
+    for dir_name in all_dirs :
+        annotations.append(F"{os.path.basename(dir_name)} {len(os.listdir(dir_name))} {os.path.basename(dir_name).split('A')[-1][:2]}\n")
+    
+    with open(ann_file_name,'w') as fw:
+        fw.writelines(annotations)
+    
+    print(F"annotations are saved to {ann_file_name}")
+
+
 def get_args() :
     parser = argparse.ArgumentParser()
     parser.add_argument("--root_dir",type=str,required=True)
@@ -70,5 +85,10 @@ def get_args() :
 
 if __name__ == "__main__" :
     args = get_args()
-    fe = FrameExtractor(args)
-    fe.extract_all_frames()
+    # fe = FrameExtractor(args)
+    # fe.extract_all_frames()
+    
+    for each_dir in os.listdir(args.root_dir) :
+        each_dir = os.path.join(args.root_dir,each_dir)
+        if os.path.isdir(each_dir) : 
+            generate_annotations(each_dir, os.path.join(args.out_dir,F"{os.path.basename(each_dir)}_annotations.txt"))
