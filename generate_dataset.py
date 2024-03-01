@@ -2,6 +2,7 @@ import os
 import shutil
 import subprocess
 import argparse
+import sys
 
 from multiprocessing import Process
 
@@ -23,19 +24,24 @@ class FrameExtractor :
         self.out_dir = args.out_dir
 
     def extract_frames(self,f_name,out_dir_to_save, fps) :
+        out_dir_to_save = os.path.join(out_dir_to_save, os.path.basename(f_name).split(".")[0])
         if not os.path.exists(out_dir_to_save):
             os.makedirs(out_dir_to_save)
-    
-        cmd = f"ffmpeg -i {f_name} -vf fps={fps} {out_dir_to_save}/frame_%05d.jpg"
+        if fps == None :    
+            cmd = f"ffmpeg -i {f_name} {out_dir_to_save}/frame_%05d.jpg"
+        else :
+            cmd = f"ffmpeg -i {f_name} -vf fps={fps} {out_dir_to_save}/frame_%05d.jpg"
         subprocess.run(cmd, shell=True, check=True)
     
-    def process_dirs(self,dirs_to_consider, fps=None, out_dir_to_save=None) :
+    def process_dirs(self,dirs_to_consider, out_dir_to_save=None, fps=None,) :
         
+        all_files = []
         for each_dir in dirs_to_consider :
             file_list = [os.path.join(each_dir,x) for x in os.listdir(each_dir)]
-        
+            all_files.extend(file_list)
+            
         processes = []
-        for f_name in file_list :
+        for f_name in all_files :
             p = Process(target=self.extract_frames, args=(f_name, out_dir_to_save, fps))
             p.start()
             processes.append(p)
@@ -48,12 +54,13 @@ class FrameExtractor :
         test_dirs = [os.path.join(self.root_dir,x) for x in os.listdir(self.root_dir) if x in test_ids]
         train_dirs = [os.path.join(self.root_dir,x) for x in os.listdir(self.root_dir) if x not in test_ids]
         
+        
         # generating train and test frames
-        self.process_dirs(train_dirs,os.path.join(self.root_dir,"train"))
-        self.process_dirs(test_dirs, os.path.join(self.root_dir,"test"))
+        self.process_dirs(train_dirs,os.path.join(self.out_dir,"train"))
+        self.process_dirs(test_dirs, os.path.join(self.out_dir,"test"))
         
         for fps in fps_list :
-            self.process_dirs(test_dirs, fps, os.path.join(self.root_dir,F"test_{fps}fps"))
+            self.process_dirs(test_dirs,os.path.join(self.out_dir,F"test_{fps}fps"), fps)
 
 def get_args() :
     parser = argparse.ArgumentParser()
